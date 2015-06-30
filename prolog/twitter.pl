@@ -16,18 +16,15 @@
 :- use_module(library(http/http_parameters)).
 :- use_module(library(http/http_client)).
 :- use_module(library(http/http_ssl_plugin)).
-:- use_module(key_and_secret).
 
 :- dynamic
 	token/1.
 
-bearer_token_credentials(B_Token):-
-	consumer_key(Key),
-	consumer_secret(Secret),
+bearer_token_credentials(Key,Secret,B_Token):-
         format(atom(B_Token),"~w:~w",[Key,Secret]).
 
-get_bearer_token(JSON,Token,ErrorCode):-
-	bearer_token_credentials(B_Token),
+get_bearer_token(Key,Secret,JSON,Token,ErrorCode):-
+	bearer_token_credentials(Key,Secret,B_Token),
 	base64(B_Token,B_Token64),
 	format(atom(My_Auth),"Basic ~w",[B_Token64]),
 	ListofData =[grant_type=client_credentials],
