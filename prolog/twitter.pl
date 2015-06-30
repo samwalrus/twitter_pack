@@ -1,6 +1,6 @@
 :- module(twitter,
          [token/1,
-          get_bearer_token/3,
+          get_bearer_token/5,
           make_a_search/4]).
 
 :- use_module(library(http/thread_httpd)).
