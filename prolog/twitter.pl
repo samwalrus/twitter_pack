@@ -2,7 +2,8 @@
          [token/1,
           get_bearer_token/5,
 		  make_a_search/4,
-		  get_user/4]).
+		  get_user/4,
+		  get_tweet/4]).
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
@@ -43,6 +44,12 @@ make_a_search(My_Search,B_Token64,JSON,ErrorCode):-
 	Path='/1.1/search/tweets.json',
 	Search=[q(My_Search)],
 	get_json(Path, Search, B_Token64, JSON, ErrorCode).
+
+get_tweet(TweetId, B_Token64, JSON, ErrorCode) :-
+    number(TweetId),
+    format(atom(Path), '/2/tweets/~w', [TweetId]),
+    Search=[expansions=author_id],
+    get_json(Path, Search, B_Token64, JSON, ErrorCode).
 
 get_user(UserId, B_Token64, JSON, ErrorCode) :-
     number(UserId), !, 
