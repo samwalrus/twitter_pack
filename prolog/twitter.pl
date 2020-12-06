@@ -39,13 +39,11 @@ get_bearer_token(Key,Secret,JSON,Token,ErrorCode):-
 
 
 make_a_search(My_Search,B_Token64,JSON,ErrorCode):-
-	format(atom(My_Auth),"Bearer ~w",[B_Token64]),
 	URL0='https://api.twitter.com/1.1/search/tweets.json',
 	url_extend(search([q(My_Search)]),URL0,URL),
 	http_open(URL, In,
-                  [ request_header(authorization=My_Auth),
-		    status_code(ErrorCode)
-
+                  [ authorization(bearer(B_Token64)),
+		    		status_code(ErrorCode)
                   ]),
 	call_cleanup(json_read_dict(In, JSON),
 	close(In)).
