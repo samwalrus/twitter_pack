@@ -1,7 +1,9 @@
 :- module(twitter,
          [token/1,
           get_bearer_token/5,
-          make_a_search/4]).
+		  make_a_search/4,
+		  get_user/4,
+		  get_tweet/4]).
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
@@ -39,29 +41,35 @@ get_bearer_token(Key,Secret,JSON,Token,ErrorCode):-
 
 
 make_a_search(My_Search,B_Token64,JSON,ErrorCode):-
-	format(atom(My_Auth),"Bearer ~w",[B_Token64]),
-	URL0='https://api.twitter.com/1.1/search/tweets.json',
-	url_extend(search([q(My_Search)]),URL0,URL),
-	http_open(URL, In,
-                  [ request_header(authorization=My_Auth),
-		    status_code(ErrorCode)
+	Path='/1.1/search/tweets.json',
+	Search=[q(My_Search)],
+	get_json(Path, Search, B_Token64, JSON, ErrorCode).
 
-                  ]),
-	call_cleanup(json_read_dict(In, JSON),
-	close(In)).
+get_tweet(TweetId, B_Token64, JSON, ErrorCode) :-
+    number(TweetId),
+    format(atom(Path), '/2/tweets/~w', [TweetId]),
+    Search=[expansions=author_id],
+    get_json(Path, Search, B_Token64, JSON, ErrorCode).
+
+get_user(UserId, B_Token64, JSON, ErrorCode) :-
+    number(UserId), !, 
+    format(atom(Path), '/2/users/~w', [UserId]),
+	Search=['user.fields'=description],
+	get_json(Path, Search, B_Token64, JSON, ErrorCode).
+
+get_user(Username, B_Token64, JSON, ErrorCode) :-
+    atom(Username),
+    uri_encoded(path, Username, EncodedUsername),
+    format(atom(Path), '/2/users/by/username/~w', [EncodedUsername]),
+	Search=['user.fields'=description],
+	get_json(Path, Search, B_Token64, JSON, ErrorCode).
 
 
-url_extend(search(Params), URL0, URL) :-
-	uri_components(URL0, Components0),
-	uri_data(search, Components0, Search0),
-	extend_search(Search0, Params, Search),
-	uri_data(search, Components0, Search, Components),
-	uri_components(URL, Components).
-
-extend_search(Var, Params, String) :-
-	var(Var), !,
-	uri_query_components(String, Params).
-extend_search(String0, Params, String) :-
-	uri_query_components(String0, Params0),
-	append(Params0, Params, AllParams),
-	uri_query_components(String, AllParams).
+get_json(Path, Search, B_Token64, JSON, ErrorCode) :-
+	URL=[scheme(https), host('api.twitter.com'), path(Path), search(Search)],
+	Options=[ authorization(bearer(B_Token64)),
+			status_code(ErrorCode)
+			],
+	setup_call_cleanup(http_open(URL, In, Options),
+					   json_read_dict(In, JSON),
+					   close(In)).
