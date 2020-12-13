@@ -1,9 +1,10 @@
 :- module(twitter,
          [token/1,
           get_bearer_token/5,
-		  make_a_search/4,
-		  get_user/4,
-		  get_tweet/4]).
+          make_a_search/4,
+          get_friends_list/4,
+          get_user/4,
+          get_tweet/4]).
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
@@ -44,6 +45,22 @@ make_a_search(My_Search,B_Token64,JSON,ErrorCode):-
 	Path='/1.1/search/tweets.json',
 	Search=[q(My_Search)],
 	get_json(Path, Search, B_Token64, JSON, ErrorCode).
+
+get_friends_list(Username, B_Token64, JSON, ErrorCode) :-
+    get_friends_list_at_cursor(Username, B_Token64, -1, JSON, ErrorCode).
+
+get_friends_list_at_cursor(Username, B_Token64, Cursor, JSON, ErrorCode) :-
+    Cursor=\=0,
+    Path='/1.1/friends/list.json',
+    Search=[screen_name=Username, count=200, cursor=Cursor],
+    get_json(Path, Search, B_Token64, Json0, ErrorCode0),
+    (   % succeed for current
+        JSON = Json0,
+        ErrorCode = ErrorCode0
+    ;   % succeed for next
+        _{next_cursor:NextCursor}:<Json0,
+        get_friends_list_at_cursor(Username, B_Token64, NextCursor, JSON, ErrorCode)
+    ).
 
 get_tweet(TweetId, B_Token64, JSON, ErrorCode) :-
     number(TweetId),
