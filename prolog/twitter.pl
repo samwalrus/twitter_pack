@@ -4,6 +4,7 @@
           make_a_search/4,
           get_friends_list/4,
           get_user/4,
+          get_user_following/4,
           get_tweet/4]).
 
 :- use_module(library(http/thread_httpd)).
@@ -47,6 +48,7 @@ make_a_search(My_Search,B_Token64,JSON,ErrorCode):-
 	get_json(Path, Search, B_Token64, JSON, ErrorCode).
 
 get_friends_list(Username, B_Token64, JSON, ErrorCode) :-
+    % DEPRECATED: Twitter API v1.1 https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-friends-list
     get_friends_list_at_cursor(Username, B_Token64, -1, JSON, ErrorCode).
 
 get_friends_list_at_cursor(Username, B_Token64, Cursor, JSON, ErrorCode) :-
@@ -60,6 +62,26 @@ get_friends_list_at_cursor(Username, B_Token64, Cursor, JSON, ErrorCode) :-
     ;   % succeed for next
         _{next_cursor:NextCursor}:<Json0,
         get_friends_list_at_cursor(Username, B_Token64, NextCursor, JSON, ErrorCode)
+    ).
+
+get_user_following(UserId, B_Token64, JSON, ErrorCode) :-
+    % Twitter API v2 https://developer.twitter.com/en/docs/twitter-api/users/follows/introduction
+    get_user_following(UserId, [], B_Token64, JSON, ErrorCode).
+
+get_user_following(UserId, Options, B_Token64, JSON, ErrorCode) :-
+    number(UserId),
+    !,
+    format(atom(Path), '/2/users/~w/following', [UserId]),
+    Search=[max_results=1000 | Options],
+    get_json(Path, Search, B_Token64, Json0, ErrorCode0),
+    (   % succeed for current
+        JSON=Json0,
+        ErrorCode=ErrorCode0
+    ;   % if there is a pagination token, succeed for next
+        _{meta:Metadata}:<Json0,
+        _{next_token:PaginationToken}:<Metadata,
+        NextOptions=[pagination_token=PaginationToken],
+        get_user_following(UserId, NextOptions, B_Token64, JSON, ErrorCode)
     ).
 
 get_tweet(TweetId, B_Token64, JSON, ErrorCode) :-
